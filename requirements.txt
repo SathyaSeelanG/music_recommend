@@ -1,0 +1,6 @@
+Flask
+opencv-python
+FER
+spotipy
+youtube-search-python
+moviepy

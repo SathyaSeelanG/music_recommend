@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Recommendations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .mood-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+
+        .song-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        .song-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .song-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .song-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .song-info {
+            padding: 1rem;
+        }
+
+        .song-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+        }
+
+        .artist-name {
+            font-size: 0.9rem;
+            color: #4a5568;
+            margin-bottom: 1rem;
+        }
+
+        .play-button {
+            width: 100%;
+            padding: 0.8rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .play-button:hover {
+            background: #764ba2;
+        }
+
+        .back-button {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.8rem 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .back-button:hover {
+            transform: translateX(-50%) scale(1.05);
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(120px);
+            z-index: 1000;
+        }
+
+        .app-header h2 {
+            color: white;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .main-content {
+            margin-top: 80px;
+            margin-bottom: 4rem;
+            flex: 1;
+        }
+
+        /* .footer {
+            position: relative;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            padding: 1rem;
+            text-align: center;
+            color: white;
+        }
+
+        .footer p {
+            margin: 0;
+            font-size: 0.9rem;
+        } */
+        .footer {
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            padding: 1rem;
+            text-align: center;
+            color: white;
+        }
+
+        .footer p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .heart {
+            color: #ff4d6d;
+            display: inline-block;
+            animation: heartbeat 1.5s infinite;
+        }
+
+        @keyframes heartbeat {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .controls-container {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+
+        .control-group select {
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 0.3rem;
+            outline: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .control-group select option {
+            background: #667eea;
+            color: white;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .refresh-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .mood-info {
+            display: none;
+        }
+
+        .detect-mood-btn {
+            background: #764ba2;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detect-mood-btn:hover {
+            background: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .detect-mood-btn span {
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-header">
+        <div class="logo">
+            <span style="font-size: 1.8rem;">🎵</span>
+            <h2>Music Mood</h2>
+        </div>
+        <a href="/" class="back-button" style="position: static; transform: none;">Home</a>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Your Music Recommendations</h1>
+            <div class="controls-container">
+                <div class="control-group">
+                    <label for="mood-select">Mood:</label>
+                    <select id="mood-select" onchange="updateRecommendations()">
+                        <option value="happy" {% if mood=='happy' %}selected{% endif %}>Happy</option>
+                        <option value="sad" {% if mood=='sad' %}selected{% endif %}>Sad</option>
+                        <option value="angry" {% if mood=='angry' %}selected{% endif %}>Angry</option>
+                        <option value="neutral" {% if mood=='neutral' %}selected{% endif %}>Neutral</option>
+                        <option value="surprise" {% if mood=='surprise' %}selected{% endif %}>Surprise</option>
+                        <option value="fear" {% if mood=='fear' %}selected{% endif %}>Fear</option>
+                        <option value="disgust" {% if mood=='disgust' %}selected{% endif %}>Disgust</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="language-select">Language:</label>
+                    <select id="language-select" onchange="updateRecommendations()">
+                        <option value="English" {% if language=='English' %}selected{% endif %}>English</option>
+                        <option value="Tamil" {% if language=='Tamil' %}selected{% endif %}>Tamil</option>
+                        <option value="Spanish" {% if language=='Spanish' %}selected{% endif %}>Spanish</option>
+                        <option value="Hindi" {% if language=='Hindi' %}selected{% endif %}>Hindi</option>
+                        <option value="Korean" {% if language=='Korean' %}selected{% endif %}>Korean</option>
+                    </select>
+                </div>
+                <button class="refresh-btn" onclick="updateRecommendations()">
+                    Update Music
+                </button>
+                <button class="detect-mood-btn" onclick="detectMood()">
+                    <span>🎥</span> Detect Mood
+                </button>
+            </div>
+        </div>
+
+        <div class="song-container">
+            {% for song in songs %}
+            <div class="song-card">
+                <img src="{{ song.image_url }}" alt="{{ song.song }}" class="song-image">
+                <div class="song-info">
+                    <div class="song-title">{{ song.song.split(' - ')[0] }}</div>
+                    <div class="artist-name">{{ song.song.split(' - ')[1] if ' - ' in song.song else 'Unknown Artist' }}
+                    </div>
+                    <button class="play-button" onclick="playSong('{{ song.spotify_url }}')">
+                        Play on {{ 'Spotify' if song.spotify_url else 'YouTube' }}
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+
+    <div class="footer">
+        <p>Done with <span class="heart">❤️</span> by HV</p>
+    </div>
+    <script>
+        function updateRecommendations() {
+            const mood = document.getElementById('mood-select').value;
+            const language = document.getElementById('language-select').value;
+            window.location.href = `/recommendations?mood=${mood}&language=${language}`;
+        }
+
+        function playSong(url) {
+            if (url) {
+                window.open(url, '_blank');
+            } else {
+                // If no Spotify URL, search on YouTube
+                const songName = event.target.parentElement.querySelector('.song-title').textContent;
+                const artistName = event.target.parentElement.querySelector('.artist-name').textContent;
+                const searchQuery = encodeURIComponent(`${songName} ${artistName}`);
+                window.open(`https://www.youtube.com/results?search_query=${searchQuery}`, '_blank');
+            }
+        }
+
+        function detectMood() {
+            const language = document.getElementById('language-select').value;
+            window.location.href = `/detect_mood/${language}`;
+        }
+    </script>
+</body>
+
+</html>
