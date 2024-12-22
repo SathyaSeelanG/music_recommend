@@ -1,15 +1,21 @@
 import os
 import cv2
-from flask import Flask, render_template, request, redirect, url_for
-from fer import FER
+import numpy as np
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
 from youtubesearchpython import VideosSearch
+from utils.data_processor import MusicDataProcessor
+import pandas as pd
+from utils.rl_agent import MusicRLAgent
+from utils.feature_extractor import SongFeatureExtractor
+from utils.emotion_model import EmotionDetector
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'
 
 # Spotify API credentials
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
@@ -21,127 +27,173 @@ spotify = Spotify(auth_manager=SpotifyClientCredentials(
     client_secret=SPOTIFY_CLIENT_SECRET
 ))
 
+# Initialize data processor
+music_processor = MusicDataProcessor()
+
+# Initialize RL components
+feature_extractor = SongFeatureExtractor()
+rl_agent = MusicRLAgent(state_size=35, action_size=len(music_processor.tracks_data))
+
+# Initialize the emotion detector (it will load the saved model)
+emotion_detector = EmotionDetector()
+
 def capture_mood():
-    """Capture face and detect mood using OpenCV and FER."""
+    """Capture face and detect mood using custom CNN model."""
     cap = cv2.VideoCapture(0)
-    detector = FER(mtcnn=True)
+    
+    # Load face cascade classifier
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    
+    # Add eye cascade for better face alignment
+    eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+    
+    print("\n=== Starting Mood Detection ===")
+    print("Opening camera...")
     
     # Set window properties
     cv2.namedWindow("Capturing your mood...", cv2.WINDOW_NORMAL)
-    cv2.moveWindow("Capturing your mood...", 0, 0)  # Move window to front
-    cv2.setWindowProperty("Capturing your mood...", cv2.WND_PROP_TOPMOST, 1)  # Keep window on top
+    cv2.moveWindow("Capturing your mood...", 0, 0)
+    cv2.setWindowProperty("Capturing your mood...", cv2.WND_PROP_TOPMOST, 1)
     
     mood_detected = "neutral"  # Default mood
-    countdown = 3  # Countdown in seconds
+    countdown = 3
     start_time = cv2.getTickCount()
     
     while True:
         ret, frame = cap.read()
         if not ret:
+            print("Error: Could not access camera")
             break
         
         # Calculate remaining time
         elapsed_time = (cv2.getTickCount() - start_time) / cv2.getTickFrequency()
         remaining_time = max(0, countdown - int(elapsed_time))
         
-        # Add countdown text to frame
+        # Convert to grayscale for face detection
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+        
+        if len(faces) > 0:
+            print(f"Face detected! ({len(faces)} faces)")
+        
+        # Draw rectangle around face and add countdown text
+        for (x, y, w, h) in faces:
+            cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+        
         if remaining_time > 0:
             text = f"Capturing in {remaining_time}..."
             cv2.putText(frame, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 
                        1, (255, 255, 255), 2, cv2.LINE_AA)
         
-        # Show the frame
         cv2.imshow("Capturing your mood...", frame)
         
-        # Break if countdown is done
+        # Capture and predict when countdown ends
         if elapsed_time >= countdown:
-            # Detect mood
-            mood = detector.detect_emotions(frame)
-            if mood:
-                mood_detected = max(mood[0]["emotions"], key=mood[0]["emotions"].get)
+            if len(faces) > 0:
+                print("\nAnalyzing facial expression...")
+                x, y, w, h = faces[0]
+                face_img = frame[y:y+h, x:x+w]
+                
+                # Detect eyes for alignment
+                eyes = eye_cascade.detectMultiScale(cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY))
+                if len(eyes) >= 2:
+                    # Sort eyes by x-coordinate
+                    eyes = sorted(eyes, key=lambda x: x[0])
+                    
+                    # Calculate angle for alignment
+                    eye1_center = (eyes[0][0] + eyes[0][2]//2, eyes[0][1] + eyes[0][3]//2)
+                    eye2_center = (eyes[1][0] + eyes[1][2]//2, eyes[1][1] + eyes[1][3]//2)
+                    angle = np.degrees(np.arctan2(eye2_center[1] - eye1_center[1], 
+                                                eye2_center[0] - eye1_center[0]))
+                    
+                    # Rotate image to align eyes horizontally
+                    M = cv2.getRotationMatrix2D((w/2, h/2), angle, 1)
+                    face_img = cv2.warpAffine(face_img, M, (w, h))
+                
+                mood, confidence = emotion_detector.predict_emotion(face_img)
+                mood_detected = mood
+                print(f"Detected emotion: {mood} ({confidence*100:.2f}%)")
+            else:
+                print("No face detected in final frame")
             break
         
-        # Allow manual exit with 'q'
         if cv2.waitKey(1) & 0xFF == ord('q'):
+            print("Detection cancelled by user")
             break
 
-    # Clean up
     cap.release()
     cv2.destroyAllWindows()
     
-    # Force close any remaining windows
     for i in range(4):
         cv2.waitKey(1)
     
+    print(f"\nFinal detected mood: {mood_detected}")
     return mood_detected
 
 def get_music_recommendations(mood, language="English"):
-    """Fetch music recommendations based on mood."""
-    mood_playlists = {
-        "happy": "Happy Hits",
-        "sad": "Sad Songs",
-        "angry": "Aggressive Songs",
-        "neutral": "Relaxing Music",
-        "surprise": "Party Hits",
-        "fear": "Calming Music",
-        "disgust": "Feel Good Music"
-    }
-    
-    playlist_name = mood_playlists.get(mood, "Popular Music")
-    
-    # Attempt to fetch from Spotify
+    """Enhanced recommendation function using RL."""
     try:
-        # Try multiple search terms for better results
-        search_terms = [
-            f"{playlist_name} {language}",
-            f"Popular {language} {mood} songs",
-            f"{language} {mood} playlist"
-        ]
+        # First try direct Spotify search based on mood and language
+        search_query = f"{mood} {language} music"
+        print(f"Searching Spotify with query: {search_query}")
         
-        for search_term in search_terms:
-            results = spotify.search(q=search_term, type="playlist", limit=1)
-            if results["playlists"]["items"]:
-                playlist_id = results["playlists"]["items"][0]["id"]
-                tracks = spotify.playlist_tracks(playlist_id)
-                song_info = []
-                for track in tracks["items"][:10]:  # Limit to 10 songs
-                    if track["track"] is None:
-                        continue
-                    song_name = track["track"]["name"]
-                    artist_name = track["track"]["artists"][0]["name"]
-                    album_image_url = track["track"]["album"]["images"][0]["url"] if track["track"]["album"]["images"] else "https://via.placeholder.com/300"
-                    spotify_url = track["track"]["external_urls"].get("spotify", "")
-                    song_info.append({
-                        "song": f"{song_name} - {artist_name}",
-                        "image_url": album_image_url,
-                        "spotify_url": spotify_url
-                    })
-                if song_info:
-                    print('songinfo', song_info)
-                    return song_info
+        results = spotify.search(q=search_query, type='track', limit=15)
         
-        raise Exception("No suitable playlists found on Spotify.")
-    
+        if results['tracks']['items']:
+            songs = []
+            for track in results['tracks']['items']:  # Removed slice
+                song_info = {
+                    "song": f"{track['name']} - {track['artists'][0]['name']}",
+                    "image_url": track['album']['images'][0]['url'] if track['album']['images'] else "https://via.placeholder.com/300",
+                    "spotify_url": "",  # Set empty for YouTube fallback
+                    "features": {
+                        "valence": 0.5,
+                        "energy": 0.5,
+                        "danceability": 0.5
+                    }
+                }
+                songs.append(song_info)
+            return songs
+            
+        print("No Spotify results, falling back to YouTube")
+        return fallback_to_youtube(mood, language)
+            
     except Exception as e:
-        print(f"Spotify API error: {e}")
-        # Fallback to YouTube with better search terms
+        print(f"Spotify recommendation error: {e}")
+        return fallback_to_youtube(mood, language)
+
+def fallback_to_youtube(mood, language):
+    """YouTube fallback logic."""
+    try:
         search_term = f"{mood} {language} music"
-        videos_search = VideosSearch(search_term, limit=10)
+        videos_search = VideosSearch(search_term, limit=15)
         response = videos_search.result()
         
-        if response and "result" in response and response["result"]:
+        if response and "result" in response:
             return [{
                 "song": video['title'],
                 "image_url": video['thumbnails'][0]['url'] if video['thumbnails'] else "https://via.placeholder.com/300",
-                "spotify_url": f"https://www.youtube.com/watch?v={video['id']}"  # Direct YouTube URL
+                "spotify_url": f"https://www.youtube.com/watch?v={video['id']}",
+                "features": {
+                    "valence": 0.5,
+                    "energy": 0.5,
+                    "danceability": 0.5
+                }
             } for video in response["result"]]
-        else:
-            # Last resort - return some default songs
-            return [{
-                "song": "No songs found - Please try a different mood or language",
-                "image_url": "https://via.placeholder.com/300",
-                "spotify_url": ""
-            }]
+        
+        return [{
+            "song": "No songs found - Please try different options",
+            "image_url": "https://via.placeholder.com/300",
+            "spotify_url": "",
+            "features": {
+                "valence": 0.5,
+                "energy": 0.5,
+                "danceability": 0.5
+            }
+        }]
+    except Exception as e:
+        print(f"YouTube fallback error: {e}")
+        return []
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -176,6 +228,37 @@ def recommendations():
         moods=moods,
         languages=languages
     )
+
+@app.route("/feedback", methods=["POST"])
+def feedback():
+    """Handle user feedback for RL training."""
+    data = request.json
+    song_id = data.get('song_id')
+    liked = data.get('liked', False)
+    
+    # Get song history
+    song_history = session.get('song_history', [])
+    if len(song_history) >= 2:
+        current_state = feature_extractor.get_state(song_history[:-1])
+        next_state = feature_extractor.get_state(song_history)
+        
+        # Calculate reward based on user feedback
+        reward = 1 if liked else -1
+        
+        # Store experience in agent's memory
+        rl_agent.remember(
+            current_state,
+            song_id,
+            reward,
+            next_state,
+            False
+        )
+        
+        # Train the agent
+        if len(rl_agent.memory) > 32:
+            rl_agent.replay(32)
+    
+    return jsonify({"status": "success"})
 
 if __name__ == "__main__":
     app.run(debug=True)

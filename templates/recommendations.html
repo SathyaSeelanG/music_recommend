@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Recommendations</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -49,6 +50,9 @@
             overflow: hidden;
             transition: transform 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
 
         .song-card:hover {
@@ -62,6 +66,7 @@
         }
 
         .song-info {
+            flex-grow: 1;
             padding: 1rem;
         }
 
@@ -79,12 +84,13 @@
         }
 
         .play-button {
+            margin-top: auto;
             width: 100%;
-            padding: 0.8rem;
+            padding: 1rem;
             background: #667eea;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 0 0 15px 15px;
             cursor: pointer;
             transition: background 0.3s ease;
         }
@@ -325,10 +331,10 @@
                     <div class="song-title">{{ song.song.split(' - ')[0] }}</div>
                     <div class="artist-name">{{ song.song.split(' - ')[1] if ' - ' in song.song else 'Unknown Artist' }}
                     </div>
-                    <button class="play-button" onclick="playSong('{{ song.spotify_url }}')">
-                        Play on {{ 'Spotify' if song.spotify_url else 'YouTube' }}
-                    </button>
                 </div>
+                <button class="play-button" onclick="playSong('{{ song.spotify_url }}')">
+                    Play on YouTube
+                </button>
             </div>
             {% endfor %}
         </div>
@@ -347,9 +353,20 @@
 
         function playSong(url) {
             if (url) {
-                window.open(url, '_blank');
+                // Check if it's a Spotify or YouTube URL
+                if (url.includes('spotify.com')) {
+                    window.open(url, '_blank');
+                } else if (url.includes('youtube.com')) {
+                    window.open(url, '_blank');
+                } else {
+                    // Fallback to YouTube search
+                    const songName = event.target.parentElement.querySelector('.song-title').textContent;
+                    const artistName = event.target.parentElement.querySelector('.artist-name').textContent;
+                    const searchQuery = encodeURIComponent(`${songName} ${artistName}`);
+                    window.open(`https://www.youtube.com/results?search_query=${searchQuery}`, '_blank');
+                }
             } else {
-                // If no Spotify URL, search on YouTube
+                // If no URL provided, fallback to YouTube search
                 const songName = event.target.parentElement.querySelector('.song-title').textContent;
                 const artistName = event.target.parentElement.querySelector('.artist-name').textContent;
                 const searchQuery = encodeURIComponent(`${songName} ${artistName}`);
@@ -360,6 +377,52 @@
         function detectMood() {
             const language = document.getElementById('language-select').value;
             window.location.href = `/detect_mood/${language}`;
+        }
+
+        function createFeatureChart(songIndex, features) {
+            const ctx = document.getElementById(`features-${songIndex}`);
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Valence', 'Energy', 'Danceability'],
+                    datasets: [{
+                        label: 'Music Features',
+                        data: [
+                            features.valence,
+                            features.energy,
+                            features.danceability
+                        ],
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                    }]
+                }
+            });
+        }
+
+        // Initialize charts for each song
+        // {% for song in songs %}
+        // {% if song.features is defined and song.features is not none %}
+        // createFeatureChart({{ loop.index }}, {{ song.features | tojson | safe }});
+        // {% endif %}
+        // {% endfor %}
+
+        function provideFeedback(songId, liked) {
+            fetch('/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    song_id: songId,
+                    liked: liked
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(liked ? 'Thanks for liking!' : 'Thanks for the feedback!');
+                    }
+                });
         }
     </script>
 </body>

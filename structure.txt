@@ -8,3 +8,148 @@ music_recommendation_app/
 │   ├── index.html
 │   └── recommendations.html
 └── .gitignore
+
+
+
+### Project Structure
+```
+music/
+├── .env                  # Environment variables (Spotify API credentials)
+├── .cache               # Spotify API cache
+├── app.py               # Main application file
+├── requirements.txt     # Project dependencies
+└── templates/
+    ├── index.html       # Home page
+    └── recommendations.html  # Music recommendations page
+```
+
+### Models & Libraries Used
+
+1. **Facial Emotion Recognition (FER)**
+   - Uses the `fer` library which implements deep learning models
+   - Based on MTCNN (Multi-task Cascaded Convolutional Networks)
+   - Detects 7 emotions: happy, sad, angry, neutral, surprise, fear, disgust
+
+2. **Spotify API**
+   - Uses `spotipy` library for Spotify Web API integration
+   - Handles music recommendations and playlist fetching
+
+### Main Components & Functions
+
+```python
+# Core Dependencies
+from fer import FER              # Facial emotion detection
+from spotipy import Spotify      # Spotify API wrapper
+from flask import Flask          # Web framework
+from youtubesearchpython import VideosSearch  # YouTube fallback
+```
+
+### Key Functions
+
+1. **`capture_mood()`**
+```python
+def capture_mood():
+    """
+    - Opens webcam using OpenCV
+    - Shows 3-second countdown
+    - Captures frame and analyzes emotion
+    - Uses FER with MTCNN for emotion detection
+    - Returns detected mood (string)
+    """
+```
+
+2. **`get_music_recommendations(mood, language)`**
+```python
+def get_music_recommendations(mood, language):
+    """
+    - Maps moods to playlist types
+    - Tries Spotify API first:
+        - Searches playlists with multiple terms
+        - Fetches tracks from best matching playlist
+        - Returns song info with images and URLs
+    - Falls back to YouTube if Spotify fails
+    - Returns list of songs with metadata
+    """
+```
+
+### Routes
+
+1. **Home Route (`/`)**
+```python
+@app.route("/", methods=["GET", "POST"])
+def index():
+    """
+    - Displays language selection
+    - Handles form submission
+    - Redirects to mood detection
+    """
+```
+
+2. **Mood Detection (`/detect_mood/<language>`)**
+```python
+@app.route("/detect_mood/<language>")
+def detect_mood(language):
+    """
+    - Triggers webcam capture
+    - Detects mood
+    - Redirects to recommendations
+    """
+```
+
+3. **Recommendations (`/recommendations`)**
+```python
+@app.route("/recommendations")
+def recommendations():
+    """
+    - Shows music recommendations
+    - Allows mood/language updates
+    - Displays song cards with play options
+    """
+```
+
+### Required Packages (requirements.txt)
+```
+flask           # Web framework
+opencv-python   # Camera handling
+fer            # Facial emotion recognition
+spotipy        # Spotify API client
+python-dotenv  # Environment variable management
+youtube-search-python  # YouTube search fallback
+```
+
+### Features
+1. Real-time emotion detection
+2. Multi-language support
+3. Spotify integration with YouTube fallback
+4. Automatic mood detection
+5. Manual mood selection
+6. Dynamic music recommendations
+7. Direct play links to Spotify/YouTube
+
+### Environment Setup (.env)
+```
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+```
+
+### User Flow
+1. User selects language
+2. Camera captures facial expression
+3. FER model detects emotion
+4. App fetches music recommendations
+5. User can:
+   - Play songs directly
+   - Change mood manually
+   - Change language
+   - Retake mood detection
+   - Update recommendations
+
+### Technical Notes
+- Uses MTCNN for better facial detection accuracy
+- Implements multiple search strategies for Spotify
+- Graceful fallback to YouTube when needed
+- Responsive UI design
+- Real-time camera feedback with countdown
+- Session-based user preferences
+
+This project combines computer vision (OpenCV + FER), music streaming APIs (Spotify), and web development (Flask) to create an emotion-based music recommendation system.

@@ -1,0 +1,2 @@
+Final training accuracy: 0.6726
+Final validation accuracy: 0.0878

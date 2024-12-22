@@ -1,0 +1,11 @@
+track_id,name,artist,valence,energy,danceability,tempo,mode,popularity
+1,"Shape of You","Ed Sheeran",0.931,0.652,0.825,96,1,90
+2,"Someone Like You","Adele",0.294,0.556,0.437,135,1,85
+3,"Happy","Pharrell Williams",0.962,0.702,0.647,160,1,88
+4,"Sad!","XXXTENTACION",0.473,0.613,0.740,75,0,87
+5,"Thunder","Imagine Dragons",0.333,0.810,0.600,168,0,84
+6,"Stay With Me","Sam Smith",0.422,0.423,0.477,84,1,85
+7,"Uptown Funk","Mark Ronson",0.926,0.856,0.856,115,0,87
+8,"Believer","Imagine Dragons",0.252,0.928,0.764,125,0,86
+9,"All of Me","John Legend",0.422,0.264,0.422,120,1,85
+10,"Despacito","Luis Fonsi",0.813,0.815,0.653,178,1,89 

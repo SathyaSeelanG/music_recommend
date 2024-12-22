@@ -1,6 +1,13 @@
 Flask
 opencv-python
-FER
 spotipy
+python-dotenv
 youtube-search-python
-moviepy
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+tensorflow
+tqdm
+requests
