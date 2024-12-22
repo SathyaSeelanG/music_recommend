@@ -9,13 +9,14 @@ A web application that detects user's emotional state through facial recognition
 - **Emotion Detection**: Custom CNN model for facial expression analysis
 - **Music Recommendation**: Reinforcement Learning based recommendation system
 - **Web Interface**: Flask-based responsive UI
-- **External APIs**: YouTube API for music playback
+- **External APIs**: YouTube and Spotify API for music playback
 
 ### 2. Key Features
 - Real-time facial emotion detection
 - Multi-language music support
 - Dynamic music recommendations
 - YouTube integration
+-spotify integration
 - User feedback system
 - Responsive UI design
 
@@ -94,6 +95,7 @@ music/
 ### 2. Music Recommendations
 - Language-specific recommendations
 - YouTube integration
+- spotify integration
 - Dynamic playlist generation
 - User feedback system
 - Music feature matching
@@ -120,7 +122,7 @@ python app.py         # Start application
 2. Capture mood via webcam
 3. View recommendations
 4. Play music on YouTube
-5. Provide feedback
+5. play music on spotify
 ```
 
 ## Performance Metrics
@@ -143,7 +145,7 @@ python app.py         # Start application
 - Enhanced model training
 - Better emotion detection accuracy
 - More sophisticated recommendation algorithm
-- Spotify API integration
+- 
 
 2. **Feature Additions**
 - User profiles
