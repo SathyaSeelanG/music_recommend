@@ -131,69 +131,80 @@ def capture_mood():
     return mood_detected
 
 def get_music_recommendations(mood, language="English"):
-    """Enhanced recommendation function using RL."""
+    """Enhanced recommendation function using both Spotify and YouTube."""
+    songs = []
+    
     try:
-        # First try direct Spotify search based on mood and language
+        # First try Spotify
         search_query = f"{mood} {language} music"
-        print(f"Searching Spotify with query: {search_query}")
+        print(f"\n=== Searching Spotify ===")
+        print(f"Query: {search_query}")
         
         results = spotify.search(q=search_query, type='track', limit=15)
         
         if results['tracks']['items']:
-            songs = []
-            for track in results['tracks']['items']:  # Removed slice
+            print(f"\nFound {len(results['tracks']['items'])} Spotify tracks")
+            for track in results['tracks']['items']:
                 song_info = {
                     "song": f"{track['name']} - {track['artists'][0]['name']}",
                     "image_url": track['album']['images'][0]['url'] if track['album']['images'] else "https://via.placeholder.com/300",
-                    "spotify_url": "",  # Set empty for YouTube fallback
+                    "spotify_url": track['external_urls']['spotify'],  # Keep Spotify URL
+                    "source": "Spotify",
                     "features": {
                         "valence": 0.5,
                         "energy": 0.5,
                         "danceability": 0.5
                     }
                 }
+                print(f"Spotify Track: {song_info['song']}")
                 songs.append(song_info)
-            return songs
-            
-        print("No Spotify results, falling back to YouTube")
-        return fallback_to_youtube(mood, language)
-            
     except Exception as e:
-        print(f"Spotify recommendation error: {e}")
-        return fallback_to_youtube(mood, language)
+        print(f"Spotify error: {e}")
 
-def fallback_to_youtube(mood, language):
-    """YouTube fallback logic."""
     try:
+        # Also get YouTube results
+        print(f"\n=== Searching YouTube ===")
         search_term = f"{mood} {language} music"
+        print(f"Query: {search_term}")
+        
         videos_search = VideosSearch(search_term, limit=15)
         response = videos_search.result()
         
         if response and "result" in response:
-            return [{
-                "song": video['title'],
-                "image_url": video['thumbnails'][0]['url'] if video['thumbnails'] else "https://via.placeholder.com/300",
-                "spotify_url": f"https://www.youtube.com/watch?v={video['id']}",
-                "features": {
-                    "valence": 0.5,
-                    "energy": 0.5,
-                    "danceability": 0.5
+            print(f"\nFound {len(response['result'])} YouTube videos")
+            for video in response["result"]:
+                song_info = {
+                    "song": video['title'],
+                    "image_url": video['thumbnails'][0]['url'] if video['thumbnails'] else "https://via.placeholder.com/300",
+                    "spotify_url": f"https://www.youtube.com/watch?v={video['id']}",
+                    "source": "YouTube",
+                    "features": {
+                        "valence": 0.5,
+                        "energy": 0.5,
+                        "danceability": 0.5
+                    }
                 }
-            } for video in response["result"]]
-        
+                print(f"YouTube Track: {song_info['song']}")
+                songs.append(song_info)
+    except Exception as e:
+        print(f"YouTube error: {e}")
+
+    if not songs:
+        print("\nNo songs found from either source")
         return [{
             "song": "No songs found - Please try different options",
             "image_url": "https://via.placeholder.com/300",
             "spotify_url": "",
+            "source": "None",
             "features": {
                 "valence": 0.5,
                 "energy": 0.5,
                 "danceability": 0.5
             }
         }]
-    except Exception as e:
-        print(f"YouTube fallback error: {e}")
-        return []
+
+    print(f"\nTotal songs found: {len(songs)}")
+    return songs
 
 @app.route("/", methods=["GET", "POST"])
 def index():

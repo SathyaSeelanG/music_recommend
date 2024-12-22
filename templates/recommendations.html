@@ -276,6 +276,24 @@
         .detect-mood-btn span {
             font-size: 1.2rem;
         }
+
+        .source-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .spotify {
+            background: #1DB954;
+            color: white;
+        }
+
+        .youtube {
+            background: #FF0000;
+            color: white;
+        }
     </style>
 </head>
 
@@ -328,12 +346,11 @@
             <div class="song-card">
                 <img src="{{ song.image_url }}" alt="{{ song.song }}" class="song-image">
                 <div class="song-info">
-                    <div class="song-title">{{ song.song.split(' - ')[0] }}</div>
-                    <div class="artist-name">{{ song.song.split(' - ')[1] if ' - ' in song.song else 'Unknown Artist' }}
-                    </div>
+                    <div class="song-title">{{ song.song }}</div>
+                    <div class="source-badge {{ song.source.lower() }}">{{ song.source }}</div>
                 </div>
-                <button class="play-button" onclick="playSong('{{ song.spotify_url }}')">
-                    Play on YouTube
+                <button class="play-button" onclick="playSong('{{ song.spotify_url }}', '{{ song.source }}')">
+                    Play on {{ song.source }}
                 </button>
             </div>
             {% endfor %}
@@ -351,25 +368,12 @@
             window.location.href = `/recommendations?mood=${mood}&language=${language}`;
         }
 
-        function playSong(url) {
+        function playSong(url, source) {
             if (url) {
-                // Check if it's a Spotify or YouTube URL
-                if (url.includes('spotify.com')) {
-                    window.open(url, '_blank');
-                } else if (url.includes('youtube.com')) {
-                    window.open(url, '_blank');
-                } else {
-                    // Fallback to YouTube search
-                    const songName = event.target.parentElement.querySelector('.song-title').textContent;
-                    const artistName = event.target.parentElement.querySelector('.artist-name').textContent;
-                    const searchQuery = encodeURIComponent(`${songName} ${artistName}`);
-                    window.open(`https://www.youtube.com/results?search_query=${searchQuery}`, '_blank');
-                }
+                window.open(url, '_blank');
             } else {
-                // If no URL provided, fallback to YouTube search
                 const songName = event.target.parentElement.querySelector('.song-title').textContent;
-                const artistName = event.target.parentElement.querySelector('.artist-name').textContent;
-                const searchQuery = encodeURIComponent(`${songName} ${artistName}`);
+                const searchQuery = encodeURIComponent(songName);
                 window.open(`https://www.youtube.com/results?search_query=${searchQuery}`, '_blank');
             }
         }
